@@ -1,0 +1,18 @@
+{
+  "name": "aadmin-backend",
+  "version": "1.0.0",
+  "description": "AAdmin API — Module-first Express 5 + MongoDB",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "seed:admin": "node scripts/seedAdmin.js",
+    "seed:settings": "node scripts/seedGlobalSettings.js",
+    "seed:demo": "SEED_SAMPLE_DATA=true node scripts/seedAdmin.js",
+    "seed:all": "npm run seed:admin && npm run seed:settings"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
