@@ -1,15 +1,14 @@
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import app from './app.js';
+import { connectDatabase } from './config/db.js';
 
 dotenv.config();
 
 const PORT = process.env.PORT || 5000;
 
-const start = async () => {
+const startLocalServer = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/aadmin');
-    console.log('MongoDB connected');
+    await connectDatabase();
     app.listen(PORT, () => {
       console.log(`Server running on http://localhost:${PORT}`);
       console.log(`Admin API: http://localhost:${PORT}/api/admin`);
@@ -20,4 +19,8 @@ const start = async () => {
   }
 };
 
-start();
+if (process.env.VERCEL !== '1') {
+  startLocalServer();
+}
+
+export default app;

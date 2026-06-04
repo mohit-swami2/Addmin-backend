@@ -34,14 +34,7 @@ adminSchema.methods.comparePassword = function comparePassword(candidate) {
   return bcrypt.compare(candidate, this.password);
 };
 
-adminSchema.methods.toAuthJSON = function toAuthJSON(req) {
-  const base = process.env.OAUTH_CALLBACK_BASE_URL || '';
-  const avatar = this.avatar
-    ? this.avatar.startsWith('http')
-      ? this.avatar
-      : `${base}/uploads/${this.avatar.replace(/^\//, '')}`
-    : null;
-
+adminSchema.methods.toAuthJSON = function toAuthJSON() {
   return {
     id: this._id.toString(),
     name: this.name,
@@ -49,7 +42,7 @@ adminSchema.methods.toAuthJSON = function toAuthJSON(req) {
     lastName: this.lastName || '',
     email: this.email,
     role: this.role,
-    avatar,
+    avatar: this.avatar,
     phone: this.phone,
     location: this.location,
     bio: this.bio,

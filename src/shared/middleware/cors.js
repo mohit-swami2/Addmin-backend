@@ -3,9 +3,11 @@ import cors from 'cors';
 const parseOrigins = () => {
   const list = [
     process.env.WEB_ORIGIN,
-    process.env.FRONTEND_URL,
+    ...(process.env.FRONTEND_URL?.split(',') || []),
     ...(process.env.CORS_WHITELIST?.split(',') || []),
-  ].filter(Boolean);
+  ]
+    .map((o) => o?.trim())
+    .filter(Boolean);
   return [...new Set(list)];
 };
 

@@ -7,7 +7,10 @@ import dotenv from 'dotenv';
 import { corsMiddleware } from './shared/middleware/cors.js';
 import { errorHandler, notFoundHandler } from './shared/middleware/errorHandler.js';
 import adminRoutes from './routes/admin/index.js';
-import { sendSuccess } from './shared/utils/response.js';
+import { connectDatabase } from './config/db.js';
+import { healthCheck } from './modules/health/health.controller.js';
+import { isS3Configured } from './shared/services/s3.js';
+import { UPLOAD_ROOT, UPLOAD_URL_PATH } from './shared/utils/uploadPaths.js';
 
 dotenv.config();
 
@@ -21,11 +24,20 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.get('/health', healthCheck);
 
-app.get('/health', (_req, res) =>
-  sendSuccess(res, { message: 'OK', data: [{ uptime: process.uptime() }] })
-);
+app.use(async (req, res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (err) {
+    next({ status: 500, message: err.message || 'Database connection failed' });
+  }
+});
+
+if (process.env.VERCEL !== '1' && !isS3Configured()) {
+  app.use(UPLOAD_URL_PATH, express.static(path.join(__dirname, `../${UPLOAD_ROOT}`)));
+}
 
 app.use('/api/admin', adminRoutes);
 

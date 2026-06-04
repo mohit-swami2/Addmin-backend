@@ -1,6 +1,7 @@
 import Product from './product.model.js';
 import { buildQueryFilter } from '../../shared/utils/queryBuilder.js';
 import { getPaginationOptions, buildPaginationMeta } from '../../shared/utils/pagination.js';
+import { serializeProduct } from '../../shared/utils/fileUrl.js';
 
 export const listProducts = async (query, req) => {
   const { page, limit, skip, sortStage, sortBy } = getPaginationOptions(query);
@@ -31,10 +32,9 @@ export const listProducts = async (query, req) => {
   ]);
 
   const total = result?.total || 0;
-  const data = (result?.data || []).map((doc) => {
-    const p = new Product(doc);
-    return p.toListJSON(req);
-  });
+  const data = await Promise.all(
+    (result?.data || []).map(async (doc) => serializeProduct(new Product(doc), req))
+  );
 
   return {
     data,
@@ -68,6 +68,20 @@ export const updateProduct = async (id, payload) => {
     { _id: id, isDeleted: false },
     { ...payload, sku: payload.sku.toUpperCase() },
     { new: true, runValidators: true }
+  );
+  if (!product) {
+    const err = new Error('Product not found');
+    err.status = 404;
+    throw err;
+  }
+  return product;
+};
+
+export const updateProductImage = async (id, image) => {
+  const product = await Product.findOneAndUpdate(
+    { _id: id, isDeleted: false },
+    { image },
+    { new: true }
   );
   if (!product) {
     const err = new Error('Product not found');

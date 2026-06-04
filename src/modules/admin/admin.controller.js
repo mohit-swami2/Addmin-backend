@@ -1,5 +1,7 @@
 import { sendSuccess } from '../../shared/utils/response.js';
 import * as adminService from './admin.service.js';
+import { serializeAdminUser } from '../../shared/utils/fileUrl.js';
+import { persistUploadedFile, removeStoredFile } from '../../shared/services/storage.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -7,7 +9,7 @@ export const register = async (req, res, next) => {
     return sendSuccess(res, {
       status: 201,
       message: 'Registration successful. Please login.',
-      data: [adminService.formatAuthResponse(admin, req).user],
+      data: [(await adminService.formatAuthResponse(admin, req)).user],
     });
   } catch (err) {
     next({ status: err.status || 500, message: err.message });
@@ -17,7 +19,7 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const admin = await adminService.loginAdmin(req.body);
-    const auth = adminService.formatAuthResponse(admin, req);
+    const auth = await adminService.formatAuthResponse(admin, req);
     return sendSuccess(res, { message: 'Login successful', data: [auth] });
   } catch (err) {
     next({ status: err.status || 500, message: err.message });
@@ -50,7 +52,7 @@ export const getProfile = async (req, res, next) => {
     const admin = await adminService.getProfile(req.adminId);
     return sendSuccess(res, {
       message: 'Profile fetched',
-      data: [admin.toAuthJSON(req)],
+      data: [await serializeAdminUser(admin, req)],
     });
   } catch (err) {
     next({ status: err.status || 500, message: err.message });
@@ -62,7 +64,7 @@ export const updateProfile = async (req, res, next) => {
     const admin = await adminService.updateProfile(req.adminId, req.body);
     return sendSuccess(res, {
       message: 'Profile updated',
-      data: [admin.toAuthJSON(req)],
+      data: [await serializeAdminUser(admin, req)],
     });
   } catch (err) {
     next({ status: err.status || 500, message: err.message });
@@ -74,9 +76,11 @@ export const uploadAvatar = async (req, res, next) => {
     if (!req.file) {
       return next({ status: 400, message: 'Avatar file is required' });
     }
-    const relativePath = `profile/${req.file.filename}`;
-    const admin = await adminService.updateAvatar(req.adminId, relativePath);
-    const avatarUrl = admin.toAuthJSON(req).avatar;
+    const existing = await adminService.getProfile(req.adminId);
+    const storageKey = await persistUploadedFile(req.file, 'profile');
+    const admin = await adminService.updateAvatar(req.adminId, storageKey);
+    if (existing?.avatar) await removeStoredFile(existing.avatar);
+    const avatarUrl = (await serializeAdminUser(admin, req)).avatar;
     return sendSuccess(res, { message: 'Avatar uploaded', data: [{ avatar: avatarUrl }] });
   } catch (err) {
     next({ status: err.status || 500, message: err.message });
@@ -97,7 +101,7 @@ export const oauthCallback = async (req, res, next) => {
     if (!req.user) {
       return next({ status: 401, message: 'OAuth authentication failed' });
     }
-    const auth = adminService.formatAuthResponse(req.user, req);
+    const auth = await adminService.formatAuthResponse(req.user, req);
     const redirectUrl = new URL('/auth/callback', process.env.FRONTEND_URL);
     const payload = Buffer.from(JSON.stringify(auth)).toString('base64url');
     redirectUrl.searchParams.set('payload', payload);

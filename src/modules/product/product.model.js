@@ -16,13 +16,7 @@ const productSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-productSchema.methods.toListJSON = function toListJSON(req) {
-  const base = process.env.OAUTH_CALLBACK_BASE_URL || '';
-  const image = this.image
-    ? this.image.startsWith('http')
-      ? this.image
-      : `${base}/uploads/${this.image.replace(/^\//, '')}`
-    : null;
+productSchema.methods.toListJSON = function toListJSON() {
   return {
     id: this._id.toString(),
     name: this.name,
@@ -32,7 +26,7 @@ productSchema.methods.toListJSON = function toListJSON(req) {
     stock: this.stock,
     status: this.status,
     description: this.description,
-    image,
+    image: this.image,
     createdAt: this.createdAt,
   };
 };

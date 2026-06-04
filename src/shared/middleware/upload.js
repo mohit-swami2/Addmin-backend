@@ -2,9 +2,11 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { useMemoryUploads } from '../services/storage.js';
+import { UPLOAD_ROOT } from '../utils/uploadPaths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadsRoot = path.join(__dirname, '../../../uploads');
+const uploadsRoot = path.join(__dirname, `../../../${UPLOAD_ROOT}`);
 
 const ensureDir = (subdir) => {
   const dir = path.join(uploadsRoot, subdir);
@@ -25,24 +27,19 @@ const diskStorage = (subdir) =>
 const maxMb = (key, fallback = 5) =>
   (Number(process.env[key]) || fallback) * 1024 * 1024;
 
-export const profileUpload = multer({
-  storage: diskStorage('profile'),
-  limits: { fileSize: maxMb('PROFILE_IMAGE_MAX_SIZE_MB') },
-  fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
-    }
-    cb(null, true);
-  },
-}).single('avatar');
+const createUpload = (subdir, fieldName) => {
+  const storage = useMemoryUploads() ? multer.memoryStorage() : diskStorage(subdir);
+  return multer({
+    storage,
+    limits: { fileSize: maxMb(fieldName === 'avatar' ? 'PROFILE_IMAGE_MAX_SIZE_MB' : 'PRODUCT_IMAGE_MAX_SIZE_MB') },
+    fileFilter: (_req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) {
+        return cb(new Error('Only image files are allowed'));
+      }
+      cb(null, true);
+    },
+  }).single(fieldName);
+};
 
-export const productUpload = multer({
-  storage: diskStorage('products'),
-  limits: { fileSize: maxMb('PRODUCT_IMAGE_MAX_SIZE_MB') },
-  fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      return cb(new Error('Only image files are allowed'));
-    }
-    cb(null, true);
-  },
-}).single('image');
+export const profileUpload = createUpload('profile', 'avatar');
+export const productUpload = createUpload('products', 'image');

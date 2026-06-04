@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import Admin from './admin.model.js';
 import { loadJwtKeys } from '../../shared/utils/keyManager.js';
 import { sendMail, applyTemplate } from '../../shared/utils/mailer.js';
+import { serializeAdminUser } from '../../shared/utils/fileUrl.js';
 
 const signToken = (admin) => {
   const { privateKey } = loadJwtKeys();
@@ -13,8 +14,8 @@ const signToken = (admin) => {
   );
 };
 
-export const formatAuthResponse = (admin, req) => ({
-  user: admin.toAuthJSON(req),
+export const formatAuthResponse = async (admin, req) => ({
+  user: await serializeAdminUser(admin, req),
   token: signToken(admin),
 });
 
